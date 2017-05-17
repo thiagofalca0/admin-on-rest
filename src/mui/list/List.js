@@ -69,13 +69,20 @@ export class List extends Component {
     }
 
     componentDidMount() {
+
         this.updateData();
+        const timerInterval = this.getAutoReloadTime();
+        if (timerInterval > 0) {
+            const intervalId = setInterval(this.reload.bind(this), timerInterval);
+            this.setState({intervalId: intervalId});
+        }
         if (Object.keys(this.props.query).length > 0) {
             this.props.changeListParams(this.props.resource, this.props.query);
         }
     }
 
     componentWillReceiveProps(nextProps) {
+
         if (nextProps.resource !== this.props.resource
          || nextProps.query.sort !== this.props.query.sort
          || nextProps.query.order !== this.props.query.order
@@ -90,6 +97,7 @@ export class List extends Component {
     }
 
     shouldComponentUpdate(nextProps, nextState) {
+
         if (
             nextProps.isLoading === this.props.isLoading
          && nextProps.width === this.props.width
@@ -101,6 +109,10 @@ export class List extends Component {
 
     getBasePath() {
         return this.props.location.pathname;
+    }
+
+    componentWillUnmount() {
+        clearInterval(this.state.intervalId);
     }
 
     refresh = (event) => {
@@ -127,11 +139,16 @@ export class List extends Component {
         return query;
     }
 
+    getAutoReloadTime() {
+        return this.props.autoReload;
+    }
+
     updateData(query) {
         const params = query || this.getQuery();
         const { sort, order, page, perPage, filter } = params;
         const permanentFilter = this.props.filter;
         this.props.crudGetList(this.props.resource, { page, perPage }, { field: sort, order }, { ...filter, ...permanentFilter });
+        
     }
 
     setSort = sort => this.changeParams({ type: SET_SORT, payload: sort });
@@ -159,8 +176,13 @@ export class List extends Component {
         this.props.changeListParams(this.props.resource, newParams);
     }
 
+    reload() {
+        this.updateData();
+    }
+
     render() {
-        const { filters, pagination = <DefaultPagination />, actions = <DefaultActions />, resource, hasCreate, title, data, ids, total, children, isLoading, translate } = this.props;
+
+        const { filters, pagination = <DefaultPagination />, actions = <DefaultActions />, resource, hasCreate, title, data, ids, total, autoReload, children, isLoading, translate } = this.props;
         const { key } = this.state;
         const query = this.getQuery();
         const filterValues = query.filter;
@@ -250,6 +272,7 @@ List.propTypes = {
     query: PropTypes.object.isRequired,
     resource: PropTypes.string.isRequired,
     total: PropTypes.number.isRequired,
+    autoReload: PropTypes.number.isRequired,
     translate: PropTypes.func.isRequired,
 };
 
@@ -257,6 +280,7 @@ List.defaultProps = {
     filter: {},
     filterValues: {},
     perPage: 10,
+    autoReload: -1,
     sort: {
         field: 'id',
         order: SORT_DESC,
